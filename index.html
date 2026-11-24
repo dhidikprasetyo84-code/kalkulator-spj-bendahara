@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator Pajak & Simulasi SPJ Bendahara</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>tailwind.config={theme:{extend:{colors:{navy:{DEFAULT:'#0b2a5b',700:'#12397a',50:'#eef3fb'},gold:{DEFAULT:'#c9a227',50:'#fbf6e3'}}}}}</script>
+<style>
+@media print{
+  .noprint{display:none!important}
+  body{background:#fff!important}
+  .card{box-shadow:none!important;border:0!important;padding:0!important}
+  .printonly{display:block!important}
+  table{font-size:10px}
+  th,td{border:1px solid #000!important;color:#000!important;background:#fff!important}
+  .xscroll{overflow:visible!important}
+}
+.printonly{display:none}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+<header class="bg-navy text-white border-b-4 border-gold noprint">
+  <div class="max-w-6xl mx-auto px-4 py-5">
+    <p class="text-gold text-xs tracking-widest font-semibold uppercase">Bendahara Pengeluaran · Bawaslu</p>
+    <h1 class="text-xl sm:text-2xl font-bold">Kalkulator Pajak & Simulasi SPJ Bendahara</h1>
+  </div>
+</header>
+
+<div class="printonly text-center mb-4">
+  <h2 class="text-lg font-bold">LEMBAR HITUNG PAJAK & REKAPITULASI SPJ</h2>
+  <p class="text-sm">Bendahara Pengeluaran – Bawaslu · Dicetak: <span id="tglCetak"></span></p>
+</div>
+
+<main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+  <section class="grid lg:grid-cols-2 gap-6 noprint">
+    <!-- FORM -->
+    <div class="card bg-white rounded-xl shadow p-5 border-t-4 border-navy">
+      <h2 class="font-bold text-navy text-lg mb-4">1. Input Transaksi</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Nama Kegiatan / Uraian Belanja</label>
+          <input id="nama" type="text" placeholder="mis. Pembelian ATK Rapat Koordinasi" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gold outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Tanggal Transaksi</label>
+          <input id="tgl" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gold outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Jenis Belanja / Objek Pajak</label>
+          <select id="jenis" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gold outline-none bg-white">
+            <option value="barang">Belanja Barang / ATK / Perlengkapan</option>
+            <option value="jasa">Belanja Jasa / Sewa / Pemeliharaan</option>
+            <option value="kuliner">Belanja Makanan & Minuman (Katering)</option>
+            <option value="hon4">Honorarium Narasumber / Kegiatan (PNS Golongan IV)</option>
+            <option value="hon3">Honorarium Narasumber / Kegiatan (PNS Golongan III)</option>
+            <option value="hon12">Honorarium Narasumber / Kegiatan (PNS Gol I/II / Non-PNS)</option>
+          </select>
+        </div>
+        <div id="boxStatus" class="hidden">
+          <label class="block text-sm font-medium mb-1">Status Penerima Honorarium</label>
+          <select id="statusHon" class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+            <option value="pns12">PNS Golongan I/II (PPh 21 Final 0%)</option>
+            <option value="nonpns">Non-PNS (5% × 50% = 2,5% dari bruto)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Nilai Bruto Kuitansi (Rp)</label>
+          <input id="bruto" type="text" inputmode="numeric" placeholder="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-lg font-semibold focus:ring-2 focus:ring-gold outline-none">
+        </div>
+        <div id="boxHarga">
+          <span class="block text-sm font-medium mb-1">Status Harga</span>
+          <label class="inline-flex items-center mr-5"><input type="radio" name="harga" value="incl" checked class="mr-2 accent-navy">Sudah Termasuk PPN</label>
+          <label class="inline-flex items-center"><input type="radio" name="harga" value="excl" class="mr-2 accent-navy">Belum Termasuk PPN</label>
+        </div>
+        <div id="boxPkp" class="hidden">
+          <label class="inline-flex items-center"><input id="pkp" type="checkbox" class="mr-2 accent-navy">Rekanan berstatus PKP (PPN dipungut walau ≤ Rp2.000.000)</label>
+        </div>
+        <div id="boxNpwp">
+          <span class="block text-sm font-medium mb-1">Status NPWP Rekanan</span>
+          <label class="inline-flex items-center mr-5"><input type="radio" name="npwp" value="ya" checked class="mr-2 accent-navy">Ber-NPWP</label>
+          <label class="inline-flex items-center"><input type="radio" name="npwp" value="tidak" class="mr-2 accent-navy">Tidak Ber-NPWP</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- HASIL -->
+    <div class="card bg-white rounded-xl shadow p-5 border-t-4 border-gold">
+      <h2 class="font-bold text-navy text-lg mb-4">2. Hasil Hitung (Real-Time)</h2>
+      <dl class="divide-y text-sm">
+        <div class="flex justify-between py-2"><dt>Dasar Pengenaan Pajak (DPP)</dt><dd id="rDpp" class="font-semibold">Rp0</dd></div>
+        <div class="flex justify-between py-2"><dt>Potongan PPN (11%)</dt><dd id="rPpn" class="font-semibold">Rp0</dd></div>
+        <div class="flex justify-between py-2"><dt id="rPphLabel">Potongan PPh</dt><dd id="rPph" class="font-semibold">Rp0</dd></div>
+        <div class="flex justify-between py-2"><dt>Total Pajak Dipungut</dt><dd id="rTotPajak" class="font-bold text-navy">Rp0</dd></div>
+      </dl>
+      <div class="mt-3 rounded-lg bg-navy text-white p-4">
+        <p class="text-xs text-gold uppercase tracking-wider">Nilai Bersih Ditransfer ke Rekanan/Penerima</p>
+        <p id="rNetto" class="text-2xl sm:text-3xl font-bold">Rp0</p>
+      </div>
+      <div class="mt-3 rounded-lg bg-gold-50 border border-gold/40 p-3 text-xs leading-relaxed">
+        <p class="font-semibold text-navy mb-1">Keterangan & Dasar Aturan</p>
+        <p id="rKet">Isi nilai bruto untuk melihat perhitungan.</p>
+      </div>
+      <button id="btnSimpan" class="mt-4 w-full bg-gold hover:bg-yellow-600 text-navy font-bold py-3 rounded-lg transition">Simpan ke Daftar Rekap</button>
+      <p id="msg" class="text-xs text-red-600 mt-2 min-h-[1rem]"></p>
+    </div>
+  </section>
+
+  <!-- REKAP -->
+  <section class="card bg-white rounded-xl shadow p-5 border-t-4 border-navy">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h2 class="font-bold text-navy text-lg">3. Rekapitulasi SPJ</h2>
+      <div class="flex flex-wrap gap-2 noprint">
+        <button id="btnCsv" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm px-3 py-2 rounded-lg">Export ke CSV / Excel</button>
+        <button id="btnPrint" class="bg-navy hover:bg-navy-700 text-white text-sm px-3 py-2 rounded-lg">Cetak Lembar Hitung</button>
+        <button id="btnReset" class="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-2 rounded-lg">Reset Semua Data</button>
+      </div>
+    </div>
+    <div class="xscroll overflow-x-auto">
+      <table class="w-full text-sm border-collapse min-w-[760px]">
+        <thead class="bg-navy text-white">
+          <tr>
+            <th class="p-2 text-left">No</th><th class="p-2 text-left">Tanggal</th><th class="p-2 text-left">Uraian</th><th class="p-2 text-left">Jenis</th>
+            <th class="p-2 text-right">Bruto</th><th class="p-2 text-right">PPN</th><th class="p-2 text-right">PPh</th><th class="p-2 text-right">Netto</th><th class="p-2 noprint"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot" class="bg-gold-50 font-bold text-navy"></tfoot>
+      </table>
+    </div>
+    <div class="printonly mt-10 text-sm">
+      <div class="flex justify-between">
+        <div class="text-center">Mengetahui,<br>Pejabat Pembuat Komitmen<br><br><br><br>(................................)</div>
+        <div class="text-center">Bendahara Pengeluaran<br><br><br><br><br>(................................)</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 mt-4 noprint">Simulasi bantu hitung. Pastikan tarif dan ketentuan sesuai regulasi perpajakan terbaru sebelum dipakai sebagai dasar pemungutan resmi.</p>
+  </section>
+</main>
+
+<script>
+const KEY='spj_bawaslu_v1';
+const $=id=>document.getElementById(id);
+const rp=n=>(n<0?'-':'')+'Rp'+Math.abs(Math.round(n)).toLocaleString('id-ID');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LABEL={barang:'Barang/ATK/Perlengkapan',jasa:'Jasa/Sewa/Pemeliharaan',kuliner:'Makanan & Minuman (Katering)',hon4:'Honorarium PNS Gol IV',hon3:'Honorarium PNS Gol III',hon12:'Honorarium PNS Gol I/II / Non-PNS'};
+const pct=r=>(Math.round(r*10000)/100).toString().replace('.',',')+'%';
+let data=[],current=null;
+try{data=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(data))data=[]}catch(e){data=[]}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}};
+const val=n=>document.querySelector('input[name="'+n+'"]:checked').value;
+const getBruto=()=>parseInt(($('bruto').value||'').replace(/\D/g,''),10)||0;
+
+function calc(o){
+  const T=2000000,b=o.bruto,fx=o.npwp?1:2;
+  let dpp=b,ppn=0,total=b,rate=0,pphName='PPh',ket='';
+  if(o.jenis==='barang'||o.jenis==='jasa'){
+    const ex=o.incl?b/1.11:b;
+    const kena=o.jenis==='barang'?ex>T:(o.pkp||ex>T);
+    if(kena){
+      if(o.incl){dpp=Math.round(b/1.11);ppn=b-dpp;total=b}
+      else{dpp=b;ppn=Math.round(dpp*0.11);total=dpp+ppn}
+    }
+    if(o.jenis==='barang'){
+      pphName='PPh Pasal 22';rate=ex>T?0.015*fx:0;
+      ket='PPN 11% (UU HPP) dipungut bila nilai tanpa PPN > Rp2.000.000 (PMK 231/PMK.03/2019). PPh Pasal 22 1,5% dikenakan atas DPP bila > Rp2.000.000 tidak terpecah, bebas bila ≤ Rp2.000.000 (PMK 59/PMK.03/2022).'+(o.npwp?'':' Tanpa NPWP tarif naik 100% menjadi 3%.');
+    }else{
+      pphName='PPh Pasal 23';rate=0.02*fx;
+      ket='PPN 11% dipungut bila rekanan PKP atau nilai tanpa PPN > Rp2.000.000. PPh Pasal 23 2% dari DPP atas jasa (UU PPh Ps. 23; PMK 141/PMK.03/2015).'+(o.npwp?'':' Tanpa NPWP tarif naik 100% menjadi 4%.');
+    }
+  }else if(o.jenis==='kuliner'){
+    pphName='PPh Pasal 23';rate=0.02*fx;
+    ket='Katering bebas PPN karena masuk objek pajak daerah (PB1). PPh Pasal 23 2% dari DPP tanpa batas minimal.'+(o.npwp?'':' Tanpa NPWP tarif naik 100% menjadi 4%.');
+  }else{
+    pphName='PPh Pasal 21 Final';
+    if(o.jenis==='hon4'){rate=0.15;ket='Honorarium PNS Golongan IV: PPh 21 Final 15% dari bruto (PP 80/2010).'}
+    else if(o.jenis==='hon3'){rate=0.05;ket='Honorarium PNS Golongan III: PPh 21 Final 5% dari bruto (PP 80/2010).'}
+    else if(o.statusHon==='pns12'){rate=0;ket='PNS Golongan I/II: tidak dipotong PPh 21 (0%).'}
+    else{rate=0.025;ket='Non-PNS: tarif 5% × 50% dasar pengenaan = 2,5% dari bruto (PMK 252/PMK.03/2008).'}
+    ket+=' Honorarium tidak dikenai PPN. Ketentuan tanpa NPWP khusus PPh 21 tidak dihitung pada simulasi ini.';
+  }
+  const pph=Math.round(dpp*rate),pajak=ppn+pph;
+  return{dpp,ppn,pph,pphName,rate,total,pajak,netto:total-pajak,ket};
+}
+
+function readForm(){
+  const j=$('jenis').value,hon=j.startsWith('hon');
+  return{jenis:j,bruto:getBruto(),incl:val('harga')==='incl',npwp:val('npwp')==='ya',pkp:$('pkp').checked,statusHon:$('statusHon').value,hon};
+}
+
+function update(){
+  const o=readForm(),hon=o.hon,kul=o.jenis==='kuliner';
+  $('boxStatus').classList.toggle('hidden',o.jenis!=='hon12');
+  $('boxPkp').classList.toggle('hidden',o.jenis!=='jasa');
+  document.querySelectorAll('input[name="harga"]').forEach(e=>e.disabled=hon||kul);
+  document.querySelectorAll('input[name="npwp"]').forEach(e=>e.disabled=hon);
+  $('boxHarga').classList.toggle('opacity-40',hon||kul);
+  $('boxNpwp').classList.toggle('opacity-40',hon);
+  if(hon||kul)o.incl=false;
+  if(hon)o.npwp=true;
+  const r=calc(o);current={o,r};
+  $('rDpp').textContent=rp(r.dpp);
+  $('rPpn').textContent=rp(r.ppn);
+  $('rPphLabel').textContent='Potongan '+r.pphName+' ('+pct(r.rate)+')';
+  $('rPph').textContent=rp(r.pph);
+  $('rTotPajak').textContent=rp(r.pajak);
+  $('rNetto').textContent=rp(r.netto);
+  $('rKet').textContent=o.bruto>0?r.ket:'Isi nilai bruto untuk melihat perhitungan.';
+}
+
+function render(){
+  const tb=$('tbody');
+  if(!data.length){tb.innerHTML='<tr><td colspan="9" class="p-4 text-center text-slate-500">Belum ada transaksi tersimpan.</td></tr>';$('tfoot').innerHTML='';return}
+  tb.innerHTML=data.map((d,i)=>`<tr class="border-b ${i%2?'bg-slate-50':''}">
+    <td class="p-2">${i+1}</td><td class="p-2 whitespace-nowrap">${esc(d.tgl)}</td><td class="p-2">${esc(d.nama)}</td><td class="p-2">${esc(d.jenisLabel)}</td>
+    <td class="p-2 text-right">${rp(d.bruto)}</td><td class="p-2 text-right">${rp(d.ppn)}</td><td class="p-2 text-right" title="${esc(d.pphName)}">${rp(d.pph)}</td><td class="p-2 text-right font-semibold">${rp(d.netto)}</td>
+    <td class="p-2 noprint"><button data-del="${d.id}" class="text-red-600 hover:underline">Hapus</button></td></tr>`).join('');
+  const s=k=>data.reduce((a,d)=>a+d[k],0);
+  $('tfoot').innerHTML=`<tr><td colspan="4" class="p-2 text-right">TOTAL</td><td class="p-2 text-right">${rp(s('bruto'))}</td><td class="p-2 text-right">${rp(s('ppn'))}</td><td class="p-2 text-right">${rp(s('pph'))}</td><td class="p-2 text-right">${rp(s('netto'))}</td><td class="noprint"></td></tr>`;
+}
+
+function fmtTgl(t){if(!t)return'-';const p=t.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:t}
+
+$('bruto').addEventListener('input',e=>{const n=e.target.value.replace(/\D/g,'');e.target.value=n?parseInt(n,10).toLocaleString('id-ID'):'';update()});
+['jenis','statusHon','pkp'].forEach(id=>$(id).addEventListener('change',update));
+document.querySelectorAll('input[name="harga"],input[name="npwp"]').forEach(e=>e.addEventListener('change',update));
+
+$('btnSimpan').addEventListener('click',()=>{
+  const nama=$('nama').value.trim(),msg=$('msg');
+  if(!nama){msg.textContent='Nama kegiatan / uraian belanja wajib diisi.';return}
+  if(!$('tgl').value){msg.textContent='Tanggal transaksi wajib diisi.';return}
+  if(!current.o.bruto){msg.textContent='Nilai bruto kuitansi wajib diisi.';return}
+  msg.textContent='';
+  const r=current.r;
+  data.push({id:Date.now()+Math.random().toString(16).slice(2),nama,tgl:fmtTgl($('tgl').value),jenisLabel:LABEL[current.o.jenis],bruto:r.total,dpp:r.dpp,ppn:r.ppn,pph:r.pph,pphName:r.pphName,netto:r.netto});
+  save();render();
+  $('nama').value='';$('bruto').value='';update();
+});
+
+$('tbody').addEventListener('click',e=>{
+  const id=e.target.getAttribute('data-del');
+  if(id){data=data.filter(d=>d.id!==id);save();render()}
+});
+$('btnReset').addEventListener('click',()=>{
+  if(data.length&&confirm('Hapus semua data rekap? Tindakan ini tidak dapat dibatalkan.')){data=[];save();render()}
+});
+$('btnPrint').addEventListener('click',()=>{$('tglCetak').textContent=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});window.print()});
+
+$('btnCsv').addEventListener('click',()=>{
+  if(!data.length){alert('Belum ada data untuk diekspor.');return}
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const rows=[['No','Tanggal','Uraian','Jenis','Bruto','DPP','PPN','Jenis PPh','PPh','Netto']];
+  data.forEach((d,i)=>rows.push([i+1,d.tgl,d.nama,d.jenisLabel,d.bruto,d.dpp,d.ppn,d.pphName,d.pph,d.netto]));
+  const s=k=>data.reduce((a,d)=>a+d[k],0);
+  rows.push(['','','','TOTAL',s('bruto'),s('dpp'),s('ppn'),'',s('pph'),s('netto')]);
+  const csv='\uFEFF'+'sep=;\r\n'+rows.map(r=>r.map(q).join(';')).join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='rekap_spj_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();a.remove();
+});
+
+$('tgl').value=new Date().toISOString().slice(0,10);
+update();render();
+</script>
+</body>
+</html>
